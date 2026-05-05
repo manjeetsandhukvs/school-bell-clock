@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a1628">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SchoolBell">
+<title>SchoolBell — Smart Period Timer</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22SchoolBell%22,%22short_name%22:%22SchoolBell%22,%22display%22:%22standalone%22,%22background_color%22:%22%230a1628%22,%22theme_color%22:%22%230a1628%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='18' fill='%230a1628'/><text y='68' x='18' font-size='60'>🔔</text></svg>%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]}">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a1628;
+    --bg2: #0f1f38;
+    --bg3: #162845;
+    --accent: #f0a500;
+    --accent2: #e06020;
+    --green: #22c98e;
+    --red: #e05555;
+    --blue: #4aa3f5;
+    --text: #f0f4ff;
+    --muted: #7a91b5;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --r: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    align-items: center; justify-content: center; padding: 2rem;
+    background: radial-gradient(ellipse at 50% 0%, #1a3060 0%, var(--bg) 70%);
+  }
+  .login-logo { font-family: 'Rajdhani', sans-serif; font-size: 3rem; font-weight: 700; color: var(--accent); letter-spacing: 2px; margin-bottom: 0.25rem; }
+  .login-sub { color: var(--muted); font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 2.5rem; }
+  .login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 2rem; width: 100%; max-width: 360px; }
+  .login-card h2 { font-family: 'Rajdhani', sans-serif; font-size: 1.3rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text); }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .field input, .field select { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 1rem; color: var(--text); font-size: 1rem; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--bg2); }
+  .btn { width: 100%; padding: 0.85rem; background: var(--accent); color: #0a0a0a; font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
+  .btn:active { transform: scale(0.98); opacity: 0.9; }
+  .btn.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); margin-top: 0.5rem; }
+  .login-hint { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 1rem; }
+
+  /* ── TEACHER VIEW ── */
+  #teacher-screen { background: var(--bg); }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem 0.75rem; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  .top-bar-left { display: flex; align-items: center; gap: 10px; }
+  .app-name { font-family: 'Rajdhani', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+  .user-badge { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; color: var(--muted); }
+  .icon-btn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 6px; border-radius: 8px; font-size: 1.2rem; transition: color 0.2s, background 0.2s; }
+  .icon-btn:hover { color: var(--text); background: var(--card); }
+
+  /* ── CLOCK HERO ── */
+  .clock-hero { padding: 1.5rem 1.25rem 1rem; text-align: center; background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%); }
+  .live-time { font-family: 'Rajdhani', sans-serif; font-size: 4.5rem; font-weight: 700; color: var(--text); line-height: 1; letter-spacing: 2px; }
+  .live-date { color: var(--muted); font-size: 0.85rem; margin-top: 4px; letter-spacing: 0.5px; }
+
+  /* ── CURRENT PERIOD CARD ── */
+  .period-now { margin: 1rem 1.25rem; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+  .period-now-header { background: var(--accent); padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between; }
+  .period-now-header span { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; color: #0a0a0a; letter-spacing: 1px; text-transform: uppercase; }
+  .period-now-body { padding: 1rem 1.25rem; }
+  .period-label-big { font-family: 'Rajdhani', sans-serif; font-size: 2rem; font-weight: 700; color: var(--text); }
+  .period-time-range { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+  .countdown-row { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+  .countdown-val { font-family: 'Rajdhani', sans-serif; font-size: 2.2rem; font-weight: 700; color: var(--accent); }
+  .countdown-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .progress-wrap { height: 6px; background: var(--bg3); border-radius: 99px; margin-top: 0.75rem; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 1s linear; }
+
+  /* ── SCHEDULE LIST ── */
+  .section-title { font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; padding: 0 1.25rem; margin: 1.25rem 0 0.5rem; }
+  .schedule-list { padding: 0 1.25rem 6rem; }
+  .sched-row { display: flex; align-items: center; gap: 10px; padding: 0.75rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; position: relative; overflow: hidden; transition: border-color 0.3s; }
+  .sched-row.current { border-color: var(--accent); background: rgba(240,165,0,0.06); }
+  .sched-row.past { opacity: 0.4; }
+  .sched-row.next { border-color: var(--blue); background: rgba(74,163,245,0.05); }
+  .sched-num { font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--muted); width: 28px; text-align: center; flex-shrink: 0; }
+  .sched-row.current .sched-num { color: var(--accent); }
+  .sched-row.next .sched-num { color: var(--blue); }
+  .sched-info { flex: 1; min-width: 0; }
+  .sched-period { font-size: 0.95rem; font-weight: 500; color: var(--text); }
+  .sched-time { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+  .sched-badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 20px; font-weight: 500; flex-shrink: 0; }
+  .badge-now { background: rgba(240,165,0,0.15); color: var(--accent); }
+  .badge-next { background: rgba(74,163,245,0.15); color: var(--blue); }
+  .badge-break { background: rgba(34,201,142,0.12); color: var(--green); }
+  .badge-done { background: var(--bg3); color: var(--muted); }
+  .bell-dot { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: none; animation: pulse 1.5s infinite; }
+  .sched-row.current .bell-dot { display: block; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:translateY(-50%) scale(1)}50%{opacity:0.4;transform:translateY(-50%) scale(1.4)} }
+
+  /* ── ADMIN PANEL ── */
+  #admin-screen { background: var(--bg); }
+  .admin-header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+  .admin-header h1 { font-family: 'Rajdhani', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+  .back-btn { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .back-btn:hover { color: var(--text); }
+  .admin-body { padding: 1.25rem; padding-bottom: 4rem; }
+
+  .sheets-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 1.25rem; margin-bottom: 1rem; }
+  .sheets-section h3 { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+  .sheets-row { display: flex; gap: 8px; }
+  .sheets-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.9rem; color: var(--text); font-size: 0.85rem; font-family: 'DM Sans', sans-serif; outline: none; }
+  .sheets-row input:focus { border-color: var(--accent); }
+  .sheets-row button { background: var(--blue); border: none; border-radius: 8px; color: #fff; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; padding: 0 1rem; cursor: pointer; white-space: nowrap; }
+  .sheets-hint { font-size: 0.72rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .fetch-status { font-size: 0.78rem; margin-top: 6px; padding: 5px 10px; border-radius: 6px; }
+  .fetch-status.ok { background: rgba(34,201,142,0.1); color: var(--green); }
+  .fetch-status.err { background: rgba(224,85,85,0.1); color: var(--red); }
+  .fetch-status.loading { background: rgba(74,163,245,0.1); color: var(--blue); }
+
+  .alarms-table { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 1rem; }
+  .alarm-row { display: grid; grid-template-columns: 36px 1fr 1fr auto; align-items: center; gap: 8px; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); }
+  .alarm-row:last-child { border-bottom: none; }
+  .alarm-row.header { background: var(--bg3); padding: 0.5rem 1rem; }
+  .alarm-row.header span { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .alarm-row input[type="time"] { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 600; outline: none; width: 100%; }
+  .alarm-row input[type="time"]:focus { border-color: var(--accent); }
+  .alarm-row input[type="text"] { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--text); font-size: 0.85rem; font-family: 'DM Sans', sans-serif; outline: none; width: 100%; }
+  .alarm-row input[type="text"]:focus { border-color: var(--accent); }
+  .alarm-idx { font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; color: var(--muted); text-align: center; }
+  .toggle { width: 36px; height: 20px; background: var(--bg3); border-radius: 10px; position: relative; cursor: pointer; border: 1px solid var(--border); transition: background 0.2s; flex-shrink: 0; }
+  .toggle.on { background: var(--green); border-color: var(--green); }
+  .toggle::after { content:''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+  .toggle.on::after { transform: translateX(16px); }
+
+  .save-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem 1.25rem; background: var(--bg2); border-top: 1px solid var(--border); display: flex; gap: 10px; z-index: 20; }
+  .save-bar button { flex: 1; padding: 0.85rem; border: none; border-radius: 8px; font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 1px; cursor: pointer; transition: opacity 0.2s; }
+  .btn-save { background: var(--accent); color: #0a0a0a; }
+  .btn-test { background: var(--bg3); color: var(--text); border: 1px solid var(--border) !important; }
+
+  /* ── BELL RING OVERLAY ── */
+  #bell-overlay { display: none; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); }
+  #bell-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .bell-ring-icon { font-size: 5rem; animation: bellSwing 0.4s ease-in-out infinite alternate; }
+  @keyframes bellSwing { from{transform:rotate(-20deg)} to{transform:rotate(20deg)} }
+  .bell-ring-period { font-family: 'Rajdhani', sans-serif; font-size: 2rem; font-weight: 700; color: var(--text); margin: 1rem 0 0.25rem; text-align: center; }
+  .bell-ring-time { font-size: 1rem; color: var(--muted); margin-bottom: 2rem; }
+  .bell-dismiss { background: var(--accent); color: #0a0a0a; border: none; border-radius: 10px; padding: 0.85rem 2.5rem; font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; cursor: pointer; }
+
+  /* ── FLOATING BELL ANIMATION ── */
+  .bell-ripple { position: absolute; width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: rippleOut 2s ease-out infinite; }
+  .bell-ripple:nth-child(2) { animation-delay: 0.5s; }
+  .bell-ripple:nth-child(3) { animation-delay: 1s; }
+  @keyframes rippleOut { 0%{transform:scale(0.5);opacity:0.6} 100%{transform:scale(2.5);opacity:0} }
+  .bell-center { position: relative; display: flex; align-items: center; justify-content: center; width: 120px; height: 120px; }
+
+  /* ── BELL SOUND UPLOAD ── */
+  .sound-upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 1.25rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+  .sound-upload-area:hover, .sound-upload-area.drag-over { border-color: var(--accent); background: rgba(240,165,0,0.04); }
+  .sound-upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .sound-upload-icon { font-size: 2rem; margin-bottom: 0.4rem; }
+  .sound-upload-label { font-size: 0.85rem; color: var(--muted); }
+  .sound-upload-label strong { color: var(--accent); }
+  .sound-current { display: flex; align-items: center; gap: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; margin-top: 0.75rem; }
+  .sound-current-name { flex: 1; font-size: 0.82rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sound-current-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; background: rgba(34,201,142,0.12); color: var(--green); flex-shrink: 0; }
+  .sound-current-tag.builtin { background: rgba(74,163,245,0.12); color: var(--blue); }
+  .sound-actions { display: flex; gap: 6px; margin-top: 0.6rem; }
+  .sound-actions button { flex: 1; padding: 0.5rem; border: none; border-radius: 7px; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; cursor: pointer; transition: opacity 0.2s; }
+  .btn-preview { background: var(--bg3); color: var(--text); border: 1px solid var(--border) !important; }
+  .btn-remove-sound { background: rgba(224,85,85,0.15); color: var(--red); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── TOAST ── */
+  #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 1.2rem; font-size: 0.85rem; color: var(--text); z-index: 200; display: none; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="login-screen" class="screen active">
+  <div class="login-logo">🔔 SchoolBell</div>
+  <div class="login-sub">SMART PERIOD CLOCK</div>
+  <div class="login-card">
+    <h2>Sign in to continue</h2>
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="login-name" placeholder="e.g. Mrs. Sharma" />
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <select id="login-role">
+        <option value="teacher">Teacher</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="field" id="pin-field">
+      <label>Admin PIN</label>
+      <input type="password" id="login-pin" placeholder="Enter admin PIN" maxlength="6" />
+    </div>
+    <button class="btn" onclick="doLogin()">Enter Classroom →</button>
+    <p class="login-hint">Admin default PIN: <strong>1234</strong> &nbsp;|&nbsp; Teachers need no PIN</p>
+  </div>
+</div>
+
+<!-- ══════════════ TEACHER SCREEN ══════════════ -->
+<div id="teacher-screen" class="screen">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <span class="app-name">🔔 SchoolBell</span>
+      <span class="user-badge" id="user-label">Teacher</span>
+    </div>
+    <div style="display:flex;gap:4px;">
+      <button class="icon-btn" onclick="refreshFromSheets()" title="Sync schedule">⟳</button>
+      <button class="icon-btn" id="admin-btn" onclick="goAdmin()" title="Admin panel" style="display:none">⚙</button>
+      <button class="icon-btn" onclick="doLogout()" title="Logout">⏻</button>
+    </div>
+  </div>
+
+  <div class="clock-hero">
+    <div class="live-time" id="live-time">--:--:--</div>
+    <div class="live-date" id="live-date">Loading...</div>
+  </div>
+
+  <div class="period-now">
+    <div class="period-now-header">
+      <span id="now-status">CURRENT PERIOD</span>
+      <span id="now-alarm-num" style="font-size:0.8rem;">BELL 1</span>
+    </div>
+    <div class="period-now-body">
+      <div class="period-label-big" id="now-label">Loading...</div>
+      <div class="period-time-range" id="now-range">--:-- → --:--</div>
+      <div class="countdown-row">
+        <div>
+          <div class="countdown-val" id="now-countdown">--:--</div>
+          <div class="countdown-label">time remaining</div>
+        </div>
+        <div style="text-align:right">
+          <div class="countdown-val" id="next-bell-in" style="color:var(--blue)">--:--</div>
+          <div class="countdown-label">next bell in</div>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-fill" id="period-progress" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Full Schedule — <span id="total-alarms">11</span> bells today</div>
+  <div class="schedule-list" id="schedule-list"></div>
+</div>
+
+<!-- ══════════════ ADMIN SCREEN ══════════════ -->
+<div id="admin-screen" class="screen">
+  <div class="admin-header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h1>⚙ Admin Panel</h1>
+  </div>
+  <div class="admin-body">
+
+    <div class="sheets-section">
+      <h3>📊 Google Sheets Sync</h3>
+      <div class="sheets-row">
+        <input type="text" id="sheets-url" placeholder="Paste Google Sheets CSV export URL…" />
+        <button onclick="fetchFromSheets()">Fetch</button>
+      </div>
+      <div class="sheets-hint">
+        In Google Sheets → File → Share → Publish to web → CSV format.<br>
+        Columns: <code>Time (HH:MM)</code> | <code>Label</code> | <code>Enabled (yes/no)</code>
+      </div>
+      <div id="fetch-status" class="fetch-status" style="display:none"></div>
+    </div>
+
+    <div class="sheets-section" style="margin-bottom:1rem;">
+      <h3>🔔 Bell Sound</h3>
+      <div class="sound-upload-area" id="sound-drop-zone">
+        <input type="file" id="bell-mp3-input" accept="audio/mpeg,audio/mp3,audio/*" onchange="handleSoundUpload(this)" />
+        <div class="sound-upload-icon">🎵</div>
+        <div class="sound-upload-label">Drop an <strong>MP3 file</strong> here or tap to browse</div>
+      </div>
+      <div class="sound-current" id="sound-current-row">
+        <span style="font-size:1.1rem;">🔊</span>
+        <span class="sound-current-name" id="sound-current-name">Built-in bell tone</span>
+        <span class="sound-current-tag builtin" id="sound-current-tag">DEFAULT</span>
+      </div>
+      <div class="sound-actions">
+        <button class="btn-preview" onclick="previewBellSound()">▶ Preview</button>
+        <button class="btn-remove-sound" id="remove-sound-btn" onclick="removeBellSound()" style="display:none">✕ Remove MP3</button>
+      </div>
+      <div class="sheets-hint" style="margin-top:6px;">MP3 is stored locally on this device. Max recommended size: 2 MB.</div>
+    </div>
+
+    <div class="sheets-section" style="margin-bottom:1rem;">
+      <h3>🔐 Change Admin PIN</h3>
+      <div class="sheets-row">
+        <input type="password" id="new-pin" placeholder="New 4–6 digit PIN" maxlength="6" />
+        <button onclick="changePin()">Set PIN</button>
+      </div>
+    </div>
+
+    <div style="font-family:'Rajdhani',sans-serif;font-size:0.8rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:0.5rem;">
+      11 Alarms — 10 Period Labels
+    </div>
+
+    <div class="alarms-table">
+      <div class="alarm-row header">
+        <span>#</span><span>Bell Time</span><span>Label / Period</span><span>On</span>
+      </div>
+      <div id="alarm-rows"></div>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <button class="btn-test save-bar" onclick="testBell()">🔔 Test Bell</button>
+    <button class="btn-save save-bar" onclick="saveSchedule()">Save Schedule</button>
+  </div>
+</div>
+
+<!-- ══════════════ BELL OVERLAY ══════════════ -->
+<div id="bell-overlay">
+  <div class="bell-center">
+    <div class="bell-ripple"></div>
+    <div class="bell-ripple"></div>
+    <div class="bell-ripple"></div>
+    <div class="bell-ring-icon">🔔</div>
+  </div>
+  <div class="bell-ring-period" id="overlay-period">Period 1</div>
+  <div class="bell-ring-time" id="overlay-time">08:00 AM</div>
+  <button class="bell-dismiss" onclick="dismissBell()">Dismiss</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── DEFAULT SCHEDULE ──
+const DEFAULT_SCHEDULE = [
+  { time: "08:00", label: "Assembly / Morning Bell", enabled: true },
+  { time: "08:10", label: "Period 1 — Mathematics", enabled: true },
+  { time: "09:00", label: "Period 2 — English", enabled: true },
+  { time: "09:50", label: "Period 3 — Science", enabled: true },
+  { time: "10:40", label: "Short Break", enabled: true },
+  { time: "11:00", label: "Period 4 — Social Studies", enabled: true },
+  { time: "11:50", label: "Period 5 — Hindi", enabled: true },
+  { time: "12:40", label: "Lunch Break", enabled: true },
+  { time: "13:20", label: "Period 6 — Computer Science", enabled: true },
+  { time: "14:10", label: "Period 7 — Art / PE", enabled: true },
+  { time: "15:00", label: "School Dismissal Bell", enabled: true }
+];
+
+// ── STATE ──
+let schedule = JSON.parse(localStorage.getItem('sb_schedule') || JSON.stringify(DEFAULT_SCHEDULE));
+let adminPin = localStorage.getItem('sb_pin') || '1234';
+let sheetsUrl = localStorage.getItem('sb_sheets') || '';
+let currentUser = null;
+let isAdmin = false;
+let lastFiredBell = localStorage.getItem('sb_last_bell') || '';
+let audioCtx = null;
+let customBellAudioBuffer = null;   // decoded AudioBuffer for custom MP3
+let customBellDataUrl = null;       // base64 data URL stored / retrieved from localStorage
+
+// ── LOAD SAVED CUSTOM BELL ──
+(function loadCustomBell() {
+  const saved = localStorage.getItem('sb_bell_mp3');
+  if (saved) {
+    customBellDataUrl = saved;
+    decodeCustomBell(saved);
+  }
+})();
+
+// ── AUDIO ──
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function ringBell(times = 5) {
+  initAudio();
+  if (customBellAudioBuffer) {
+    playCustomBell(times);
+  } else {
+    playBuiltinBell(times);
+  }
+}
+
+function playBuiltinBell(times) {
+  const ring = (delay) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime + delay);
+    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + delay + 0.5);
+    gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(0.6, audioCtx.currentTime + delay + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.8);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 0.9);
+  };
+  for (let i = 0; i < times; i++) ring(i * 1.1);
+}
+
+function playCustomBell(times) {
+  const doPlay = () => {
+    const duration = customBellAudioBuffer.duration;
+    const repeatInterval = Math.max(duration + 0.2, 1.1);
+    for (let i = 0; i < times; i++) {
+      const src = audioCtx.createBufferSource();
+      src.buffer = customBellAudioBuffer;
+      src.connect(audioCtx.destination);
+      src.start(audioCtx.currentTime + i * repeatInterval);
+    }
+  };
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(doPlay);
+  } else {
+    doPlay();
+  }
+}
+
+function decodeCustomBell(source) {
+  // source: ArrayBuffer (fresh upload) or base64 dataUrl string (from localStorage)
+  initAudio();
+  const doDecode = (buf) => {
+    audioCtx.decodeAudioData(buf.slice(0), (decoded) => {
+      customBellAudioBuffer = decoded;
+    }, (err) => {
+      console.error('Bell decode error:', err);
+      customBellAudioBuffer = null;
+    });
+  };
+  if (typeof source === 'string') {
+    // base64 dataUrl — convert to ArrayBuffer via fetch
+    fetch(source)
+      .then(r => r.arrayBuffer())
+      .then(buf => doDecode(buf))
+      .catch(e => { console.error('dataUrl fetch error:', e); customBellAudioBuffer = null; });
+  } else {
+    doDecode(source);
+  }
+}
+
+// ── SOUND UPLOAD (Admin) ──
+function handleSoundUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { toast('File too large — keep MP3 under 4 MB'); input.value=''; return; }
+
+  // Step 1: read as ArrayBuffer for immediate decoding
+  const bufReader = new FileReader();
+  bufReader.onload = function(e) {
+    decodeCustomBell(e.target.result);
+  };
+  bufReader.readAsArrayBuffer(file);
+
+  // Step 2: read as dataUrl for localStorage persistence
+  const urlReader = new FileReader();
+  urlReader.onload = function(e) {
+    customBellDataUrl = e.target.result;
+    try {
+      localStorage.setItem('sb_bell_mp3', customBellDataUrl);
+      localStorage.setItem('sb_bell_mp3_name', file.name);
+    } catch(err) { toast('Storage full — try a smaller MP3'); }
+  };
+  urlReader.readAsDataURL(file);
+
+  updateSoundUI(file.name);
+  toast('Bell sound uploaded ✓');
+}
+
+function removeBellSound() {
+  customBellDataUrl = null;
+  customBellAudioBuffer = null;
+  localStorage.removeItem('sb_bell_mp3');
+  localStorage.removeItem('sb_bell_mp3_name');
+  updateSoundUI(null);
+  toast('Removed — back to built-in tone');
+}
+
+function previewBellSound() {
+  initAudio();
+  // Resume context if suspended (browser autoplay policy)
+  const play = () => ringBell(customBellAudioBuffer ? 1 : 2);
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(play);
+  } else {
+    play();
+  }
+}
+
+function updateSoundUI(filename) {
+  const nameEl = document.getElementById('sound-current-name');
+  const tagEl  = document.getElementById('sound-current-tag');
+  const rmBtn  = document.getElementById('remove-sound-btn');
+  if (!nameEl) return;
+  if (filename) {
+    nameEl.textContent = filename;
+    tagEl.textContent  = 'CUSTOM MP3';
+    tagEl.className    = 'sound-current-tag';
+    rmBtn.style.display = 'block';
+  } else {
+    nameEl.textContent = 'Built-in bell tone';
+    tagEl.textContent  = 'DEFAULT';
+    tagEl.className    = 'sound-current-tag builtin';
+    rmBtn.style.display = 'none';
+  }
+}
+
+// Drag-and-drop highlight
+document.addEventListener('DOMContentLoaded', () => {
+  const zone = document.getElementById('sound-drop-zone');
+  if (zone) {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) { const inp = document.getElementById('bell-mp3-input'); inp.files = e.dataTransfer.files; handleSoundUpload(inp); }
+    });
+  }
+});
+
+// ── LOGIN ──
+document.getElementById('login-role').addEventListener('change', function() {
+  document.getElementById('pin-field').style.display = this.value === 'admin' ? 'block' : 'none';
+});
+document.getElementById('pin-field').style.display = 'none';
+
+function doLogin() {
+  const name = document.getElementById('login-name').value.trim();
+  const role = document.getElementById('login-role').value;
+  const pin = document.getElementById('login-pin').value;
+  if (!name) { toast('Please enter your name'); return; }
+  if (role === 'admin' && pin !== adminPin) { toast('Wrong admin PIN ✗'); return; }
+  currentUser = name; isAdmin = (role === 'admin');
+  document.getElementById('user-label').textContent = name;
+  document.getElementById('admin-btn').style.display = isAdmin ? 'block' : 'none';
+  showScreen('teacher-screen');
+  startClock();
+}
+function doLogout() {
+  showScreen('login-screen');
+  currentUser = null; isAdmin = false;
+}
+
+// ── SCREENS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goAdmin() { populateAdminRows(); showScreen('admin-screen'); }
+function goBack() { showScreen('teacher-screen'); }
+
+// ── CLOCK TICK ──
+function startClock() {
+  tick(); setInterval(tick, 1000);
+  if (sheetsUrl) document.getElementById('sheets-url') && (document.getElementById('sheets-url').value = sheetsUrl);
+}
+
+function tick() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('live-time').textContent = `${hh}:${mm}:${ss}`;
+  document.getElementById('live-date').textContent = now.toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  updatePeriodStatus(now);
+  checkBells(now);
+}
+
+function timeToMins(t) {
+  const [h,m] = t.split(':').map(Number); return h*60+m;
+}
+function minsToDisplay(m) {
+  const hh = Math.floor(m/60), mm = m%60;
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh%12 || 12;
+  return `${h12}:${String(mm).padStart(2,'0')} ${ampm}`;
+}
+function secsToMM_SS(s) {
+  const m = Math.floor(s/60), sec = s%60;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function updatePeriodStatus(now) {
+  const enabled = schedule.filter(a => a.enabled);
+  if (!enabled.length) return;
+  const nowM = now.getHours()*60 + now.getMinutes();
+  const nowS = now.getSeconds();
+
+  let currentIdx = -1, nextIdx = -1;
+  for (let i = 0; i < enabled.length - 1; i++) {
+    const start = timeToMins(enabled[i].time);
+    const end = timeToMins(enabled[i+1].time);
+    if (nowM >= start && nowM < end) { currentIdx = i; nextIdx = i+1; break; }
+  }
+
+  if (currentIdx === -1 && nowM < timeToMins(enabled[0].time)) {
+    // Before first bell
+    document.getElementById('now-label').textContent = 'School not started';
+    const diffM = timeToMins(enabled[0].time) - nowM;
+    document.getElementById('now-range').textContent = `First bell at ${minsToDisplay(timeToMins(enabled[0].time))}`;
+    document.getElementById('now-countdown').textContent = secsToMM_SS((diffM*60) - nowS);
+    document.getElementById('next-bell-in').textContent = secsToMM_SS((diffM*60) - nowS);
+    document.getElementById('period-progress').style.width = '0%';
+    document.getElementById('now-status').textContent = 'UPCOMING';
+    document.getElementById('now-alarm-num').textContent = '';
+  } else if (currentIdx === -1) {
+    document.getElementById('now-label').textContent = 'School day complete';
+    document.getElementById('now-range').textContent = 'All periods done for today';
+    document.getElementById('now-countdown').textContent = '--:--';
+    document.getElementById('next-bell-in').textContent = '--:--';
+    document.getElementById('period-progress').style.width = '100%';
+    document.getElementById('now-status').textContent = 'SCHOOL OVER';
+    document.getElementById('now-alarm-num').textContent = '';
+  } else {
+    const startM = timeToMins(enabled[currentIdx].time);
+    const endM = timeToMins(enabled[nextIdx].time);
+    const totalSecs = (endM - startM) * 60;
+    const elapsedSecs = (nowM - startM)*60 + nowS;
+    const remainSecs = totalSecs - elapsedSecs;
+    const pct = Math.min(100, (elapsedSecs / totalSecs) * 100);
+
+    document.getElementById('now-label').textContent = enabled[currentIdx].label;
+    document.getElementById('now-range').textContent = `${minsToDisplay(startM)} → ${minsToDisplay(endM)}`;
+    document.getElementById('now-countdown').textContent = secsToMM_SS(Math.max(0, remainSecs));
+    document.getElementById('now-status').textContent = 'CURRENT PERIOD';
+    document.getElementById('now-alarm-num').textContent = `BELL ${currentIdx+1}`;
+
+    // Next bell countdown
+    const nextM = timeToMins(enabled[nextIdx].time);
+    const nextDiff = (nextM - nowM)*60 - nowS;
+    document.getElementById('next-bell-in').textContent = secsToMM_SS(Math.max(0, nextDiff));
+    document.getElementById('period-progress').style.width = pct + '%';
+  }
+
+  renderScheduleList(now);
+}
+
+function renderScheduleList(now) {
+  const list = document.getElementById('schedule-list');
+  const enabled = schedule.filter(a => a.enabled);
+  const nowM = now.getHours()*60 + now.getMinutes();
+  let html = '';
+  enabled.forEach((a, i) => {
+    const aM = timeToMins(a.time);
+    const nextM = i < enabled.length-1 ? timeToMins(enabled[i+1].time) : null;
+    const isCurrent = nextM !== null && nowM >= aM && nowM < nextM;
+    const isPast = nextM !== null ? nowM >= nextM : nowM >= aM;
+    const isNext = !isCurrent && !isPast && (i === 0 || nowM >= timeToMins(enabled[i-1].time));
+
+    let cls = isCurrent ? 'current' : isPast ? 'past' : isNext ? 'next' : '';
+    let badge = '';
+    if (isCurrent) badge = '<span class="sched-badge badge-now">NOW</span>';
+    else if (isNext && !isPast) badge = '<span class="sched-badge badge-next">NEXT</span>';
+    else if (isPast) badge = '<span class="sched-badge badge-done">DONE</span>';
+    const isBreak = a.label.toLowerCase().includes('break') || a.label.toLowerCase().includes('lunch');
+    if (isBreak && !isPast && !isCurrent) badge = '<span class="sched-badge badge-break">BREAK</span>';
+
+    html += `<div class="sched-row ${cls}">
+      <span class="sched-num">${i+1}</span>
+      <div class="sched-info">
+        <div class="sched-period">${a.label}</div>
+        <div class="sched-time">${minsToDisplay(aM)}</div>
+      </div>
+      ${badge}
+      <div class="bell-dot"></div>
+    </div>`;
+  });
+  list.innerHTML = html;
+  document.getElementById('total-alarms').textContent = enabled.length;
+}
+
+// ── BELL CHECK ──
+function checkBells(now) {
+  const key = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+  if (lastFiredBell === key || now.getSeconds() > 5) return;
+  const enabled = schedule.filter(a => a.enabled);
+  const h = now.getHours(), m = now.getMinutes();
+  enabled.forEach((a, i) => {
+    const [ah, am] = a.time.split(':').map(Number);
+    if (ah === h && am === m) {
+      lastFiredBell = key;
+      localStorage.setItem('sb_last_bell', key);
+      fireBell(a.label, a.time, i+1);
+    }
+  });
+}
+
+function fireBell(label, time, num) {
+  ringBell(3);
+  document.getElementById('overlay-period').textContent = label;
+  document.getElementById('overlay-time').textContent = minsToDisplay(timeToMins(time));
+  document.getElementById('bell-overlay').classList.add('show');
+  if (Notification.permission === 'granted') {
+    new Notification(`🔔 SchoolBell`, { body: `${label} — ${minsToDisplay(timeToMins(time))}`, icon: '' });
+  }
+  setTimeout(dismissBell, 15000);
+}
+function dismissBell() {
+  document.getElementById('bell-overlay').classList.remove('show');
+}
+
+// ── ADMIN ROWS ──
+function populateAdminRows() {
+  const container = document.getElementById('alarm-rows');
+  if (sheetsUrl) document.getElementById('sheets-url').value = sheetsUrl;
+  // Refresh sound UI
+  const savedName = localStorage.getItem('sb_bell_mp3_name');
+  updateSoundUI(customBellDataUrl ? (savedName || 'Custom bell.mp3') : null);
+  let html = '';
+  schedule.forEach((a, i) => {
+    html += `<div class="alarm-row">
+      <span class="alarm-idx">${i+1}</span>
+      <input type="time" value="${a.time}" id="t_${i}" />
+      <input type="text" value="${a.label}" id="l_${i}" placeholder="Period label…" />
+      <div class="toggle ${a.enabled?'on':''}" id="tog_${i}" onclick="toggleAlarm(${i})"></div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function toggleAlarm(i) {
+  const el = document.getElementById(`tog_${i}`);
+  el.classList.toggle('on');
+}
+
+function saveSchedule() {
+  schedule = schedule.map((a,i) => ({
+    time: document.getElementById(`t_${i}`).value || a.time,
+    label: document.getElementById(`l_${i}`).value || a.label,
+    enabled: document.getElementById(`tog_${i}`).classList.contains('on')
+  }));
+  // sort by time
+  schedule.sort((a,b) => timeToMins(a.time) - timeToMins(b.time));
+  localStorage.setItem('sb_schedule', JSON.stringify(schedule));
+  if (sheetsUrl) localStorage.setItem('sb_sheets', sheetsUrl);
+  toast('Schedule saved ✓');
+  goBack();
+}
+
+function testBell() {
+  initAudio();
+  ringBell(2);
+  document.getElementById('overlay-period').textContent = 'Test Bell';
+  document.getElementById('overlay-time').textContent = 'Ring ring!';
+  document.getElementById('bell-overlay').classList.add('show');
+  setTimeout(dismissBell, 4000);
+}
+
+function changePin() {
+  const np = document.getElementById('new-pin').value.trim();
+  if (np.length < 4) { toast('PIN must be 4-6 digits'); return; }
+  adminPin = np;
+  localStorage.setItem('sb_pin', np);
+  document.getElementById('new-pin').value = '';
+  toast('Admin PIN updated ✓');
+}
+
+// ── GOOGLE SHEETS SYNC ──
+function refreshFromSheets() {
+  if (!sheetsUrl) { toast('No Sheets URL set — open admin panel'); return; }
+  fetchFromSheetsUrl(sheetsUrl);
+}
+
+function fetchFromSheets() {
+  const url = document.getElementById('sheets-url').value.trim();
+  if (!url) { toast('Paste a Google Sheets CSV URL first'); return; }
+  sheetsUrl = url;
+  fetchFromSheetsUrl(url);
+}
+
+function fetchFromSheetsUrl(url) {
+  const status = document.getElementById('fetch-status');
+  if (status) { status.style.display='block'; status.className='fetch-status loading'; status.textContent='Fetching from Google Sheets…'; }
+  // Use a CORS proxy for cross-origin CSV
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  fetch(proxyUrl)
+    .then(r => { if (!r.ok) throw new Error('Network error'); return r.text(); })
+    .then(csv => {
+      const rows = csv.trim().split('\n').slice(1).map(r => r.split(',').map(c => c.replace(/^"|"$/g,'').trim()));
+      const parsed = rows.filter(r => r.length >= 2 && /^\d{1,2}:\d{2}$/.test(r[0].trim())).map(r => ({
+        time: r[0].trim().padStart(5,'0').replace(/^(\d):/, '0$1:'),
+        label: r[1] || 'Period',
+        enabled: r[2] ? r[2].toLowerCase() !== 'no' : true
+      }));
+      if (parsed.length === 0) throw new Error('No valid rows found. Check column format.');
+      schedule = parsed;
+      localStorage.setItem('sb_schedule', JSON.stringify(schedule));
+      localStorage.setItem('sb_sheets', sheetsUrl);
+      if (status) { status.className='fetch-status ok'; status.textContent=`✓ Loaded ${parsed.length} alarms from Sheets`; }
+      populateAdminRows();
+      toast(`Synced ${parsed.length} alarms from Google Sheets ✓`);
+    })
+    .catch(e => {
+      if (status) { status.className='fetch-status err'; status.textContent=`✗ Error: ${e.message}`; }
+      toast('Could not fetch Sheets — check URL & publishing settings');
+    });
+}
+
+// ── NOTIFICATIONS ──
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.display='block';
+  setTimeout(() => el.style.display='none', 2800);
+}
+
+// ── PWA INSTALL ──
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
+</script>
+</body>
+</html>
